@@ -1,0 +1,24 @@
+{
+  "data_root": "/kaggle/input",
+  "folds": [
+    1,
+    2,
+    3,
+    4,
+    5
+  ],
+  "epochs": 100,
+  "batch_size": 32,
+  "lr": 0.001,
+  "weight_decay": 0.0001,
+  "patience": 15,
+  "img_size": 128,
+  "hidden_dim": 128,
+  "dropout": 0.5,
+  "clahe": false,
+  "online_aug": false,
+  "num_workers": 2,
+  "seed": 42,
+  "ckpt_dir": "./Checkpoints",
+  "out_dir": "./Results"
+}
