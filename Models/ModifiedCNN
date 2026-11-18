@@ -1,0 +1,83 @@
+import torch
+import torch.nn as nn
+
+
+def conv_bn_relu(in_c, out_c, kernel_size=3):
+    """Conv (padding 'same') -> BatchNorm -> ReLU. bias=False karena BatchNorm sudah punya bias."""
+    return nn.Sequential(
+        nn.Conv2d(in_c, out_c, kernel_size=kernel_size, padding=kernel_size // 2, bias=False),
+        nn.BatchNorm2d(out_c),
+        nn.ReLU(inplace=True),
+    )
+
+
+class ModifiedCNN(nn.Module):
+    """Versi modifikasi SimpleCNN (Models/CNN.py) untuk klasifikasi 6 kelas MSLD v2.0.
+
+    Hasil training SimpleCNN (Results/CNN): akurasi rerata 5-fold 44,76% dengan
+    best_epoch hanya 1-8 -> model cepat overfitting. Sumber utamanya adalah lapisan
+    Flatten + Linear(7200 -> 128) yang memuat ~97% parameter model (921 ribu dari
+    949 ribu). Modifikasi yang dilakukan:
+
+      * 2 blok konvolusi -> 4 blok, tiap blok berisi 2 konvolusi 3x3 (VGG-style),
+        jumlah filter 32-64-128-256 (sebelumnya 20-50, kernel 5x5, 1 konvolusi/blok),
+      * MaxPool 3x3 -> MaxPool 2x2 (resolusi turun lebih pelan, detail lesi tidak hilang),
+      * Flatten -> Global Average Pooling: FC pertama hanya menerima 256 fitur
+        (sebelumnya 7200), sehingga model tidak lagi dominan di lapisan FC,
+      * Dropout2d ringan di antar blok + Dropout di bagian FC,
+      * inisialisasi Kaiming pada konvolusi.
+
+    forward() mengembalikan LOGIT (tanpa softmax), sama seperti SimpleCNN, sehingga
+    kompatibel dengan nn.CrossEntropyLoss dan test.py (softmax dipakai saat evaluasi).
+    """
+
+    def __init__(self, input_c=3, output=6, img_size=128, hidden_dim=256,
+                 dropout=0.4, spatial_dropout=0.1, channels=(32, 64, 128, 256)):
+        super(ModifiedCNN, self).__init__()
+        self.img_size = img_size  # tidak dipakai karena ada GAP; dipertahankan agar signature sama dgn SimpleCNN
+
+        blocks, in_c = [], input_c
+        for i, out_c in enumerate(channels):
+            blocks.append(nn.Sequential(
+                conv_bn_relu(in_c, out_c),
+                conv_bn_relu(out_c, out_c),
+                nn.MaxPool2d(kernel_size=2),
+                # blok pertama tanpa dropout agar fitur tepi/warna dasar tidak terganggu
+                nn.Dropout2d(spatial_dropout) if i > 0 else nn.Identity(),
+            ))
+            in_c = out_c
+        self.features = nn.Sequential(*blocks)
+        self.gap = nn.AdaptiveAvgPool2d(1)
+
+        self.fc = nn.Sequential(
+            nn.Dropout(dropout),
+            nn.Linear(in_features=channels[-1], out_features=hidden_dim),
+            nn.ReLU(inplace=True),
+            nn.Dropout(dropout),
+            nn.Linear(in_features=hidden_dim, out_features=output),
+        )
+        self._init_weights()
+
+    def _init_weights(self):
+        for m in self.modules():
+            if isinstance(m, nn.Conv2d):
+                nn.init.kaiming_normal_(m.weight, mode="fan_out", nonlinearity="relu")
+            elif isinstance(m, nn.Linear):
+                nn.init.kaiming_uniform_(m.weight, nonlinearity="relu")
+                nn.init.zeros_(m.bias)
+
+    def forward(self, x):
+        x = self.features(x)
+        x = self.gap(x)
+        return self.fc(torch.flatten(x, 1))
+
+
+if __name__ == "__main__":
+    from CNN import SimpleCNN  # python Models/ModifiedCNN.py
+
+    def n_params(m):
+        return sum(p.numel() for p in m.parameters() if p.requires_grad)
+
+    x = torch.randn(2, 3, 128, 128)
+    for net in (SimpleCNN(), ModifiedCNN()):
+        print(f"{net.__class__.__name__:<12} output={tuple(net(x).shape)}  parameter={n_params(net):,}")
