@@ -1,7 +1,6 @@
 # Klasifikasi Citra Lesi Kulit Mpox: Perbandingan SimpleCNN, ModifiedCNN, dan YOLOv8-cls dengan 5-Fold Cross Validation
 
-> **Status:** hasil Test SimpleCNN dan ModifiedCNN sudah final. Hasil Test YOLOv8-cls ( gambar confusion matrix/ROC YOLO) diisi setelah `test_yolo.py` dijalankan dan folder `Results/YOLO/` di-push lengkap. Bagian bertanda `TODO` diisi manual.
-
+>
 | Penulis | Afiliasi |
 |---|---|
 | TODO: Dewi Rahmah Sekar Arum (108102530002) | Telkom University Surabya|
