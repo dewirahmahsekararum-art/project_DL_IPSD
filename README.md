@@ -1,10 +1,10 @@
 # Klasifikasi Citra Lesi Kulit Mpox: Perbandingan SimpleCNN, ModifiedCNN, dan YOLOv8-cls dengan 5-Fold Cross Validation
 
-> **Status:** hasil Test SimpleCNN dan ModifiedCNN sudah final. Hasil Test YOLOv8-cls (nilai `XX,XX` dan gambar confusion matrix/ROC YOLO) diisi setelah `test_yolo.py` dijalankan dan folder `Results/YOLO/` di-push lengkap. Bagian bertanda `TODO` diisi manual.
+> **Status:** hasil Test SimpleCNN dan ModifiedCNN sudah final. Hasil Test YOLOv8-cls ( gambar confusion matrix/ROC YOLO) diisi setelah `test_yolo.py` dijalankan dan folder `Results/YOLO/` di-push lengkap. Bagian bertanda `TODO` diisi manual.
 
 | Penulis | Afiliasi |
 |---|---|
-| TODO: Nama Penulis (NIM) | TODO: Departemen, Nama Organisasi, Kota, Negara, email |
+| TODO: Dewi Rahmah Sekar Arum (108102530002) | Telkom University Surabya|
 
 **Abstrak —** Penularan mpox yang meningkat di berbagai benua menuntut identifikasi pembawa penyakit sejak dini, sementara jumlah ahli yang dapat menilai ciri-ciri lesi kulit terbatas. Penelitian ini membangun sistem klasifikasi citra kulit ke dalam enam kelas, yaitu Monkeypox, Chickenpox, Measles, Cowpox, HFMD, dan Healthy, menggunakan Mpox Skin Lesion Dataset v2.0 (MSLD v2.0). Tiga model dibandingkan, semuanya dilatih dari nol tanpa bobot pretrained: SimpleCNN (dua blok konvolusi) sebagai baseline, ModifiedCNN (empat blok konvolusi 3×3 dengan global average pooling), dan YOLOv8n-cls. Data latih terdiri dari citra Original Train dan Augmented Train, sedangkan Original Valid dan Original Test hanya digunakan untuk validasi dan pengujian. Kinerja diukur dengan rerata 5-fold cross validation pada data Test. SimpleCNN menghasilkan akurasi 44,76%, F1-score macro 27,55%, dan ROC-AUC 0,735. ModifiedCNN meningkatkannya menjadi akurasi 61,87%, F1-score macro 53,28%, dan ROC-AUC 0,864. YOLOv8n-cls mencapai akurasi XX,XX%, F1-score macro XX,XX%, dan ROC-AUC X,XXX. TODO: simpulkan satu kalimat tentang model terbaik.
 
@@ -155,7 +155,6 @@ Model dilatih terpisah pada fold 1 sampai 5 (*Train* → *Valid* untuk memilih c
 |---|---|---|---|---|---|---|
 | SimpleCNN | 949.212 | 44,76 ± 8,79 | 28,52 ± 11,34 | 30,83 ± 6,63 | 27,55 ± 8,09 | 0,735 ± 0,031 |
 | ModifiedCNN | 1.240.550 | **61,87 ± 6,60** | **62,80 ± 16,31** | **51,76 ± 9,38** | **53,28 ± 11,56** | **0,864 ± 0,056** |
-| YOLOv8n-cls | 1.445.974 | XX,XX ± X,XX | XX,XX ± X,XX | XX,XX ± X,XX | XX,XX ± X,XX | X,XXX ± X,XXX |
 
 > TODO: setelah nilai YOLO terisi, tebalkan nilai terbaik pada tiap kolom (tanda tebal di atas saat ini ada pada ModifiedCNN karena baru dua model yang sudah punya hasil Test).
 
@@ -195,16 +194,6 @@ Angka Valid bukan hasil akhir dan tidak boleh dipakai sebagai klaim kinerja, kar
 | 5 | 63 | 68,25 | 79,86 | 61,80 | 64,97 | 0,917 |
 | **Rerata ± std** | | 61,87 ± 6,60 | 62,80 ± 16,31 | 51,76 ± 9,38 | 53,28 ± 11,56 | 0,864 ± 0,056 |
 
-**Tabel 6.** YOLOv8n-cls (dalam %, kecuali ROC-AUC). TODO: salin dari `Results/YOLO/metrics_per_fold.csv`.
-
-| Fold | n Test | Accuracy | Precision (macro) | Recall (macro) | F1 (macro) | ROC-AUC |
-|---|---|---|---|---|---|---|
-| 1 | 74 | XX,XX | XX,XX | XX,XX | XX,XX | X,XXX |
-| 2 | 82 | XX,XX | XX,XX | XX,XX | XX,XX | X,XXX |
-| 3 | 64 | XX,XX | XX,XX | XX,XX | XX,XX | X,XXX |
-| 4 | 81 | XX,XX | XX,XX | XX,XX | XX,XX | X,XXX |
-| 5 | 63 | XX,XX | XX,XX | XX,XX | XX,XX | X,XXX |
-| **Rerata ± std** | | XX,XX ± X,XX | XX,XX ± X,XX | XX,XX ± X,XX | XX,XX ± X,XX | X,XXX ± X,XXX |
 
 ### C. Gambar
 
