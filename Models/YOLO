@@ -1,0 +1,104 @@
+"""Model ke-3: YOLO (Ultralytics YOLOv8-cls) untuk klasifikasi citra lesi kulit.
+
+YOLO di sini dipakai dalam mode KLASIFIKASI (bukan deteksi objek), karena MSLD v2.0
+hanya punya label per gambar, tanpa bounding box. Arsitektur: backbone CSP (C2f) +
+head klasifikasi (Conv -> GlobalAvgPool -> Linear), dengan loss CrossEntropy.
+
+Aturan tugas dijaga:
+  * dilatih dari nol: memakai file konfigurasi '.yaml' (bukan '.pt' pretrained),
+  * Train = Original Train + Augmented Train, Valid = Original Valid, Test = Original Test
+    (pembagian yang sama dengan SimpleCNN / ModifiedCNN lewat Utils.getData).
+
+Ultralytics membaca dataset dari struktur folder  <root>/{train,val,test}/<kelas>/*.jpg,
+jadi untuk tiap fold dibuat folder berisi symlink (tidak menyalin gambar).
+"""
+import os
+import shutil
+from pathlib import Path
+
+import numpy as np
+
+from Utils.getData import build_samples
+
+# n = nano (~1,4 juta parameter), s = small, m = medium, dst.
+YOLO_VARIANTS = {"n": "yolov8n-cls.yaml", "s": "yolov8s-cls.yaml", "m": "yolov8m-cls.yaml"}
+
+
+def _link(src, dst):
+    try:
+        os.symlink(os.path.abspath(src), dst)
+    except OSError:  # filesystem tanpa symlink -> salin
+        shutil.copy2(src, dst)
+
+
+def prepare_fold_dir(fold, fold_info, class_names, out_root):
+    """Bangun <out_root>/fold<k>/{train,val,test}/<kelas>/ berisi symlink ke gambar asli.
+
+    Nama file diberi awalan nomor urut agar gambar Original dan Augmented yang namanya
+    sama tidak saling menimpa. Return: path folder fold.
+    """
+    fold_dir = Path(out_root) / f"fold{fold}"
+    if fold_dir.exists():
+        shutil.rmtree(fold_dir)
+    for split, folder in (("train", "train"), ("valid", "val"), ("test", "test")):
+        for cls in class_names:
+            (fold_dir / folder / cls).mkdir(parents=True, exist_ok=True)
+        for i, (path, label) in enumerate(build_samples(fold_info, split, class_names)):
+            _link(path, fold_dir / folder / class_names[label] / f"{i:06d}_{Path(path).name}")
+    return fold_dir
+
+
+def build_yolo(variant="n"):
+    """YOLOv8-cls tanpa bobot pretrained (dari file .yaml)."""
+    from ultralytics import YOLO
+    return YOLO(YOLO_VARIANTS[variant])
+
+
+def train_yolo(fold, data_dir, args, project_dir):
+    """Latih satu fold. Checkpoint terbaik (berdasar akurasi Valid) = <project>/fold<k>/weights/best.pt.
+
+    Return: path best.pt
+    """
+    model = build_yolo(args.variant)
+    model.train(
+        data=str(data_dir), imgsz=args.img_size, epochs=args.epochs, batch=args.batch_size,
+        patience=args.patience, optimizer="AdamW", lr0=args.lr, weight_decay=args.weight_decay,
+        dropout=args.dropout, seed=args.seed + fold, deterministic=True,
+        pretrained=False,                 # dari nol, tanpa bobot luar
+        workers=args.num_workers, project=str(project_dir), name=f"fold{fold}", exist_ok=True,
+        plots=False, verbose=True,
+    )
+    return Path(project_dir) / f"fold{fold}" / "weights" / "best.pt"
+
+
+def read_history(project_dir, fold):
+    """Baca results.csv Ultralytics -> format history yang dipakai Utils.evaluate.plot_training."""
+    import pandas as pd
+    df = pd.read_csv(Path(project_dir) / f"fold{fold}" / "results.csv")
+    df.columns = [c.strip() for c in df.columns]
+    val_acc = df["metrics/accuracy_top1"].tolist()
+    return {
+        "train_loss": df["train/loss"].tolist(),
+        "val_loss": df["val/loss"].tolist(),
+        "train_acc": [float("nan")] * len(df),   # Ultralytics tidak menghitung akurasi train
+        "val_acc": val_acc,
+        "best_epoch": int(np.argmax(val_acc)) + 1,
+    }
+
+
+def predict_proba(weights, image_paths, class_names, img_size, batch=64, device=None):
+    """Probabilitas softmax (N, C) dengan urutan kolom = class_names (sama dengan model CNN)."""
+    from ultralytics import YOLO
+    model = YOLO(str(weights))
+    # urutan kelas internal Ultralytics (abjad) dipetakan ke urutan class_names
+    name_to_col = {n.lower(): i for i, n in enumerate(class_names)}
+    col_of = [name_to_col[model.names[i].lower()] for i in range(len(model.names))]
+
+    probs = np.zeros((len(image_paths), len(class_names)), dtype=np.float64)
+    for start in range(0, len(image_paths), batch):
+        chunk = image_paths[start:start + batch]
+        for k, r in enumerate(model.predict(chunk, imgsz=img_size, verbose=False, device=device)):
+            p = r.probs.data.cpu().numpy()
+            for src_i, dst_i in enumerate(col_of):
+                probs[start + k, dst_i] = p[src_i]
+    return probs
