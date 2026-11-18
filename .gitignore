@@ -1,0 +1,25 @@
+# --- Model hasil training: DILARANG diunggah ke GitHub ---
+Checkpoints/
+*.pt
+*.pth
+*.h5
+*.hdf5
+*.ckpt
+*.caffemodel
+*.prototxt
+*.onnx
+*.pkl
+*.safetensors
+
+# --- Dataset: DILARANG diunggah ke GitHub ---
+Dataset/
+data/
+*.zip
+
+# --- Lain-lain ---
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
+.vscode/
+.idea/
+.DS_Store

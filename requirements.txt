@@ -1,0 +1,7 @@
+# Kaggle sudah memiliki torch; baris ini hanya memastikan paket lain tersedia.
+torch
+numpy
+pandas
+scikit-learn
+matplotlib
+opencv-python-headless
