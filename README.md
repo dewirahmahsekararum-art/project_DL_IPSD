@@ -1,11 +1,11 @@
 # Klasifikasi Citra Lesi Kulit Mpox: Perbandingan SimpleCNN, ModifiedCNN, dan YOLOv8-cls dengan 5-Fold Cross Validation
 
->
+
 | Penulis | Institusi |
 |---|---|
 | Dewi Rahmah Sekar Arum (108102530002) | Telkom University Surabya|
 
-**Abstrak —** Penularan mpox yang meningkat di berbagai benua menuntut identifikasi pembawa penyakit sejak dini, sementara jumlah ahli yang dapat menilai ciri-ciri lesi kulit terbatas. Penelitian ini membangun sistem klasifikasi citra kulit ke dalam enam kelas, yaitu Monkeypox, Chickenpox, Measles, Cowpox, HFMD, dan Healthy, menggunakan Mpox Skin Lesion Dataset v2.0 (MSLD v2.0). Tiga model dibandingkan, semuanya dilatih dari nol tanpa bobot pretrained: SimpleCNN (dua blok konvolusi) sebagai baseline, ModifiedCNN (empat blok konvolusi 3×3 dengan global average pooling), dan YOLOv8n-cls. Data latih terdiri dari citra Original Train dan Augmented Train, sedangkan Original Valid dan Original Test hanya digunakan untuk validasi dan pengujian. Kinerja diukur dengan rerata 5-fold cross validation pada data Test. SimpleCNN menghasilkan akurasi 44,76%, F1-score macro 27,55%, dan ROC-AUC 0,735. ModifiedCNN meningkatkannya menjadi akurasi 61,87%, F1-score macro 53,28%, dan ROC-AUC 0,864. YOLOv8n-cls mencapai akurasi XX,XX%, F1-score macro XX,XX%, dan ROC-AUC X,XXX. TODO: simpulkan satu kalimat tentang model terbaik.
+**Abstrak —** Penularan mpox yang meningkat di berbagai benua menuntut identifikasi pembawa penyakit sejak dini, sementara jumlah ahli yang dapat menilai ciri-ciri lesi kulit terbatas. Penelitian ini membangun sistem klasifikasi citra kulit ke dalam enam kelas, yaitu Monkeypox, Chickenpox, Measles, Cowpox, HFMD, dan Healthy, menggunakan Mpox Skin Lesion Dataset v2.0 (MSLD v2.0). Tiga model dibandingkan, semuanya dilatih dari nol tanpa bobot pretrained: SimpleCNN (dua blok konvolusi) sebagai baseline, ModifiedCNN (empat blok konvolusi 3×3 dengan global average pooling), dan YOLOv8n-cls. Data latih terdiri dari citra Original Train dan Augmented Train, sedangkan Original Valid dan Original Test hanya digunakan untuk validasi dan pengujian. Kinerja diukur dengan rerata 5-fold cross validation pada data Test. SimpleCNN menghasilkan akurasi 44,76%, F1-score macro 27,55%, dan ROC-AUC 0,735. ModifiedCNN meningkatkannya menjadi akurasi 61,87%, F1-score macro 53,28%, dan ROC-AUC 0,864. YOLOv8n-cls memberi hasil rerata terbaik dengan akurasi 65,99%, F1-score macro 61,80%, dan ROC-AUC 0,891, serta variasi antar fold yang paling kecil. Selisih YOLOv8n-cls terhadap ModifiedCNN tidak seragam di seluruh fold, sehingga keunggulannya perlu dibaca dengan hati-hati.
 
 ***Kata kunci—*** mpox, klasifikasi citra, convolutional neural network, YOLO, cross validation, lesi kulit
 
@@ -59,7 +59,7 @@ Dataset: [Mpox Skin Lesion Dataset Version 2.0 (MSLD v2.0)](https://www.kaggle.c
 | Valid | Original Valid saja |
 | Test | Original Test saja |
 
-Valid dan Test tidak pernah dipakai untuk training, dan tidak ada dataset atau bobot pretrained dari luar yang digunakan. Ketiga model memakai pembagian data yang identik. Jumlah citra Test per fold adalah 74, 82, 64, 81, dan 63 (total 364).
+Valid dan Test tidak pernah dipakai untuk training, dan tidak ada dataset atau bobot pretrained dari luar yang digunakan. Ketiga model memakai pembagian data yang identik. Jumlah citra Test per fold adalah 74, 82, 64, 81, dan 63 (total 364), dengan sebaran kelas pada Test gabungan: Monkeypox 125, HFMD 82, Healthy 50, Chickenpox 42, Cowpox 35, dan Measles 30.
 
 TODO: tempel keluaran `python -m Utils.getData` (jumlah gambar per kelas dan split) sebagai Tabel 1.
 
@@ -128,6 +128,7 @@ Jumlah parameter: **1.240.550**, dengan hanya 67.334 (5%) di lapisan *fully conn
 | Loss | CrossEntropy | CrossEntropy | CrossEntropy |
 | Optimizer | Adam | Adam | AdamW |
 | Learning rate | 0,001 | 0,001 | 0,001 |
+| Scheduler | ReduceLROnPlateau (×0,5, sabar 5) | ReduceLROnPlateau (×0,5, sabar 5) | Bawaan Ultralytics |
 | Weight decay | 1e-4 | 5e-4 | 5e-4 |
 | Dropout | 0,5 (FC) | 0,4 (FC), 0,1 (konv.) | 0,3 (*head*) |
 | Batch size | 32 | 32 | 32 |
@@ -138,7 +139,7 @@ Jumlah parameter: **1.240.550**, dengan hanya 67.334 (5%) di lapisan *fully conn
 | Checkpoint | valid loss terendah | valid loss terendah | akurasi Valid tertinggi |
 | Augmentasi online | tidak | tidak | bawaan Ultralytics |
 
-Checkpoint selalu dipilih dari data **Valid**, bukan Test. Perlu dicatat bahwa kriteria pemilihan checkpoint YOLO (akurasi Valid) berbeda dari kedua model CNN (valid loss), karena itulah mekanisme bawaan Ultralytics.
+Checkpoint selalu dipilih dari data **Valid**, bukan Test. Perlu dicatat bahwa optimizer, augmentasi, dan kriteria pemilihan checkpoint YOLO berbeda dari kedua model CNN, karena itulah mekanisme bawaan Ultralytics. Perbandingan dengan YOLO karena itu tidak sepenuhnya murni perbandingan arsitektur.
 
 ### E. 5-Fold Cross Validation dan Evaluasi
 
@@ -153,25 +154,12 @@ Model dilatih terpisah pada fold 1 sampai 5 (*Train* → *Valid* untuk memilih c
 | Model | Parameter | Accuracy | Precision (macro) | Recall (macro) | F1 (macro) | ROC-AUC |
 |---|---|---|---|---|---|---|
 | SimpleCNN | 949.212 | 44,76 ± 8,79 | 28,52 ± 11,34 | 30,83 ± 6,63 | 27,55 ± 8,09 | 0,735 ± 0,031 |
-| ModifiedCNN | 1.240.550 | **61,87 ± 6,60** | **62,80 ± 16,31** | **51,76 ± 9,38** | **53,28 ± 11,56** | **0,864 ± 0,056** |
-
-> TODO: setelah nilai YOLO terisi, tebalkan nilai terbaik pada tiap kolom (tanda tebal di atas saat ini ada pada ModifiedCNN karena baru dua model yang sudah punya hasil Test).
-
-Hasil YOLOv8-cls pada data **Valid** (akurasi pada epoch checkpoint terpilih) sudah tersedia dari `training_history.json`, dan dapat dibandingkan dengan kedua model lain pada kondisi yang sama:
-
-**Tabel 3.** Akurasi Valid pada epoch checkpoint terpilih (%).
-
-| Model | Fold 1 | Fold 2 | Fold 3 | Fold 4 | Fold 5 | Rerata ± std |
-|---|---|---|---|---|---|---|
-| SimpleCNN | 45,83 | 54,88 | 43,79 | 51,33 | 44,16 | 48,00 ± 4,89 |
-| ModifiedCNN | 51,39 | 76,22 | 54,90 | 70,00 | 59,74 | 62,45 ± 10,41 |
-| YOLOv8n-cls | 68,75 | 73,78 | 64,05 | 68,00 | 71,43 | 69,20 ± 3,68 |
-
-Angka Valid bukan hasil akhir dan tidak boleh dipakai sebagai klaim kinerja, karena data Valid ikut menentukan pemilihan checkpoint. Angka ini hanya gambaran awal sebelum hasil Test YOLO tersedia.
+| ModifiedCNN | 1.240.550 | 61,87 ± 6,60 | 62,80 ± 16,31 | 51,76 ± 9,38 | 53,28 ± 11,56 | 0,864 ± 0,056 |
+| YOLOv8n-cls | 1.445.974 | **65,99 ± 3,61** | **69,65 ± 5,60** | **60,67 ± 4,46** | **61,80 ± 3,50** | **0,891 ± 0,026** |
 
 ### B. Hasil per Fold pada Data Test
 
-**Tabel 4.** SimpleCNN (dalam %, kecuali ROC-AUC).
+**Tabel 3.** SimpleCNN (dalam %, kecuali ROC-AUC).
 
 | Fold | n Test | Accuracy | Precision (macro) | Recall (macro) | F1 (macro) | ROC-AUC |
 |---|---|---|---|---|---|---|
@@ -182,7 +170,7 @@ Angka Valid bukan hasil akhir dan tidak boleh dipakai sebagai klaim kinerja, kar
 | 5 | 63 | 33,33 | 20,66 | 22,96 | 19,88 | 0,760 |
 | **Rerata ± std** | | 44,76 ± 8,79 | 28,52 ± 11,34 | 30,83 ± 6,63 | 27,55 ± 8,09 | 0,735 ± 0,031 |
 
-**Tabel 5.** ModifiedCNN (dalam %, kecuali ROC-AUC).
+**Tabel 4.** ModifiedCNN (dalam %, kecuali ROC-AUC).
 
 | Fold | n Test | Accuracy | Precision (macro) | Recall (macro) | F1 (macro) | ROC-AUC |
 |---|---|---|---|---|---|---|
@@ -193,6 +181,27 @@ Angka Valid bukan hasil akhir dan tidak boleh dipakai sebagai klaim kinerja, kar
 | 5 | 63 | 68,25 | 79,86 | 61,80 | 64,97 | 0,917 |
 | **Rerata ± std** | | 61,87 ± 6,60 | 62,80 ± 16,31 | 51,76 ± 9,38 | 53,28 ± 11,56 | 0,864 ± 0,056 |
 
+**Tabel 5.** YOLOv8n-cls (dalam %, kecuali ROC-AUC).
+
+| Fold | n Test | Accuracy | Precision (macro) | Recall (macro) | F1 (macro) | ROC-AUC |
+|---|---|---|---|---|---|---|
+| 1 | 74 | 66,22 | 70,52 | 55,96 | 58,53 | 0,873 |
+| 2 | 82 | 60,98 | 61,31 | 56,44 | 57,85 | 0,857 |
+| 3 | 64 | 70,31 | 67,87 | 66,58 | 65,92 | 0,915 |
+| 4 | 81 | 64,20 | 72,15 | 62,33 | 62,64 | 0,891 |
+| 5 | 63 | 68,25 | 76,40 | 62,01 | 64,08 | 0,918 |
+| **Rerata ± std** | | 65,99 ± 3,61 | 69,65 ± 5,60 | 60,67 ± 4,46 | 61,80 ± 3,50 | 0,891 ± 0,026 |
+
+**Tabel 6.** Recall per kelas pada Test gabungan 5 fold (dalam %), dihitung dari confusion matrix.
+
+| Kelas | n Test | SimpleCNN | ModifiedCNN | YOLOv8n-cls |
+|---|---|---|---|---|
+| Chickenpox | 42 | 0 | 31 | 43 |
+| Cowpox | 35 | 14 | 37 | 40 |
+| HFMD | 82 | 63 | 76 | 71 |
+| Healthy | 50 | 26 | 52 | 72 |
+| Measles | 30 | 0 | 33 | 53 |
+| Monkeypox | 125 | 75 | 82 | 78 |
 
 ### C. Gambar
 
@@ -220,7 +229,7 @@ ModifiedCNN:
 
 ![Confusion matrix ModifiedCNN](Results/ModifiedCNN/confusion_matrix.png)
 
-YOLOv8n-cls (tampil setelah `Results/YOLO/` hasil `test_yolo.py` di-push):
+YOLOv8n-cls:
 
 ![Confusion matrix YOLOv8n-cls](Results/YOLO/confusion_matrix.png)
 
@@ -242,19 +251,17 @@ YOLOv8n-cls:
 
 **Perbaikan dari SimpleCNN ke ModifiedCNN.** ModifiedCNN menaikkan akurasi Test rerata dari 44,76% menjadi 61,87% (+17,11 poin), F1-score macro dari 27,55% menjadi 53,28% (+25,73 poin), dan ROC-AUC dari 0,735 menjadi 0,864. Kenaikan ini konsisten di kelima fold untuk akurasi, F1 macro, dan ROC-AUC. Pada SimpleCNN, valid loss terendah dicapai pada epoch 1 sampai 8, sedangkan pada ModifiedCNN pada epoch 9 sampai 26. Artinya model dapat belajar lebih lama sebelum mulai *overfitting*, yang sejalan dengan dugaan bahwa lapisan *flatten* + FC yang menyimpan 97% parameter pada baseline adalah sumber masalah utamanya. Penjelasan ini masih berupa dugaan, karena perubahan dilakukan bersamaan (kedalaman, kernel, GAP, dropout, weight decay) dan pengaruh masing-masing belum diuji lewat *ablation*.
 
-**Kelas yang sulit.** Confusion matrix gabungan ModifiedCNN menunjukkan Monkeypox dikenali paling baik (recall 82%, 102 dari 125 citra), diikuti HFMD (76%) dan Healthy (52%). Kelas minoritas jauh lebih lemah: Chickenpox 31%, Cowpox 37%, dan Measles 33%. Kesalahan terbesar adalah citra Chickenpox (23 dari 42) dan Cowpox (17 dari 35) yang diprediksi sebagai Monkeypox, serta Measles yang tersebar ke Monkeypox (9 dari 30) dan HFMD (7 dari 30). Pola ini menunjukkan model cenderung memilih kelas mayoritas, dan *class-weighted loss* menjadi kandidat perbaikan berikutnya. Ini juga menjelaskan mengapa precision macro (62,80%) jauh lebih tinggi daripada recall macro (51,76%).
+**YOLOv8n-cls dibanding ModifiedCNN.** Pada rerata, YOLOv8n-cls unggul di semua metrik: akurasi +4,12 poin (65,99% vs 61,87%), F1 macro +8,52 poin (61,80% vs 53,28%), dan ROC-AUC +0,026 (0,891 vs 0,864). Kenaikan recall macro (+8,91 poin) lebih besar daripada kenaikan precision macro (+6,85 poin), yang berarti YOLO lebih jarang melewatkan kelas minoritas. Simpangan baku antar fold juga jauh lebih kecil (akurasi 3,61 vs 6,60 poin; F1 macro 3,50 vs 11,56 poin), sehingga hasilnya lebih stabil. Namun keunggulan ini **tidak seragam di setiap fold**. YOLO jelas lebih baik pada fold 1 (66,22% vs 59,46%) dan fold 3 (70,31% vs 51,56%), sama persis pada fold 4 (64,20%) dan fold 5 (68,25%), dan justru lebih rendah pada fold 2 (60,98% vs 65,85%). Selisih rerata sebagian besar berasal dari fold 3, tempat ModifiedCNN paling lemah. Karena selisih akurasi rerata (4,12 poin) lebih kecil daripada simpangan baku akurasi ModifiedCNN (6,60 poin), dan karena ada 63 sampai 82 citra Test per fold, kesimpulan yang aman adalah YOLO setidaknya sebanding dan lebih stabil, bukan pasti lebih baik. Lonjakan dari SimpleCNN ke kedua model lain (di atas 17 poin) jauh lebih meyakinkan daripada selisih antara ModifiedCNN dan YOLO.
 
-**Variasi antar fold.** Simpangan baku akurasi ModifiedCNN adalah 6,60 poin, dengan fold 3 paling rendah (51,56%) dan fold 5 paling tinggi (68,25%). Jumlah citra Test hanya 63 sampai 82 per fold, sehingga satu atau dua citra mengubah akurasi sekitar 1 sampai 3 poin. Selisih antar model yang kecil perlu dibaca dengan hati-hati, sedangkan selisih SimpleCNN ke ModifiedCNN (belasan poin) cukup besar dibanding variasi tersebut.
+**Kelas yang sulit.** Pada ketiga model, Monkeypox, kelas terbesar (125 citra), selalu dikenali paling baik (recall 75% sampai 82%). SimpleCNN praktis hanya memprediksi Monkeypox dan HFMD: recall Chickenpox dan Measles 0%, dan 40 dari 42 citra Chickenpox diprediksi Monkeypox. ModifiedCNN memperbaiki hampir semua kelas, tetapi Chickenpox (31%), Cowpox (37%), dan Measles (33%) masih lemah, dengan kesalahan terbesar berupa prediksi ke Monkeypox. YOLO memberi kenaikan terbesar pada kelas yang paling sulit bagi ModifiedCNN: Healthy 52% → 72% (+20 poin), Measles 33% → 53% (+20 poin), dan Chickenpox 31% → 43% (+12 poin). Sebagai gantinya, recall HFMD (76% → 71%) dan Monkeypox (82% → 78%) sedikit menurun, jadi YOLO membagi kemampuannya lebih merata antar kelas. Meski begitu, Cowpox (40%) dan Chickenpox (43%) masih sering tertukar dengan Monkeypox (14 dari 35 dan 18 dari 42), sehingga distribusi kelas yang tidak seimbang tetap menjadi masalah utama.
 
-**Kesenjangan train dan valid.** Pada epoch checkpoint, akurasi train ModifiedCNN berkisar 66% sampai 88% dan akurasi Valid 51% sampai 76%. Kesenjangan ini menunjukkan masih ada *overfitting* ringan sampai sedang, dan rata-rata Valid (62,45%) dekat dengan rata-rata Test (61,87%).
+**Variasi antar fold dan kesenjangan train–valid.** Simpangan baku akurasi ModifiedCNN adalah 6,60 poin, dengan fold 3 terendah (51,56%) dan fold 5 tertinggi (68,25%), sedangkan pada YOLO fold 3 justru tertinggi (70,31%). Hal ini menunjukkan sebagian variasi berasal dari komposisi citra Test tiap fold, bukan hanya dari model. Pada epoch checkpoint, akurasi train ModifiedCNN berkisar 66% sampai 88% dan akurasi Valid 51% sampai 76%, yang menunjukkan masih ada *overfitting* ringan sampai sedang. Checkpoint terbaik YOLO dicapai pada epoch 21 sampai 33, lebih lama daripada ModifiedCNN (epoch 9 sampai 26), sejalan dengan kurva training yang lebih stabil.
 
-**YOLOv8n-cls.** TODO: isi setelah hasil Test tersedia. Poin yang dapat dibahas: (1) apakah YOLOv8n-cls melampaui ModifiedCNN pada Test, mengingat akurasi Valid-nya lebih tinggi (69,20% dibanding 62,45%) dan lebih stabil antar fold (std 3,68 dibanding 10,41), (2) pengaruh augmentasi bawaan Ultralytics yang tidak dipakai pada dua model lain, sehingga perbandingan bukan murni arsitektur, (3) kelas yang paling sering salah dibanding ModifiedCNN, dan (4) jumlah epoch yang lebih panjang (checkpoint terbaik pada epoch 21 sampai 33).
-
-**Keterbatasan.** Tiga hal membatasi kesimpulan: citra Test per fold sedikit, distribusi kelas tidak seimbang, dan perbandingan dengan YOLO tidak sepenuhnya setara (optimizer, augmentasi, dan kriteria checkpoint berbeda). Pengembangan yang dapat dilakukan: *class-weighted loss*, augmentasi online pada seluruh model (`--online_aug`), *ablation* untuk tiap perubahan arsitektur, dan *explainability* (Grad-CAM).
+**Keterbatasan.** (1) Citra Test per fold sedikit sehingga satu atau dua citra mengubah akurasi 1 sampai 3 poin. (2) Distribusi kelas tidak seimbang. (3) Perbandingan dengan YOLO tidak sepenuhnya setara: optimizer, augmentasi bawaan Ultralytics, dan kriteria checkpoint berbeda dari dua model CNN, sehingga keunggulan YOLO tidak dapat dikaitkan hanya dengan arsitekturnya. (4) Pengaruh tiap perubahan pada ModifiedCNN belum diuji lewat *ablation*. Pengembangan yang dapat dilakukan: *class-weighted loss*, augmentasi online yang sama pada seluruh model (`--online_aug`), *ablation* untuk tiap perubahan arsitektur, varian YOLO yang lebih besar (`--variant s` atau `m`), dan *explainability* (Grad-CAM).
 
 ## IV. KESIMPULAN
 
-TODO: satu atau dua paragraf (tanpa poin). Isi: (1) ModifiedCNN memperbaiki SimpleCNN secara jelas, yaitu akurasi 44,76% → 61,87% dan F1 macro 27,55% → 53,28%, (2) hasil YOLOv8n-cls dan model terbaik di antara ketiganya setelah hasil Test tersedia, (3) kelas yang paling sulit (Chickenpox, Cowpox, Measles), dan (4) saran pengembangan.
+Penelitian ini membandingkan tiga model yang dilatih dari nol untuk klasifikasi enam kelas citra lesi kulit pada MSLD v2.0. ModifiedCNN memperbaiki baseline SimpleCNN secara jelas, dengan akurasi naik dari 44,76% menjadi 61,87% dan F1-score macro dari 27,55% menjadi 53,28%, yang sejalan dengan dugaan bahwa lapisan *flatten* dan *fully connected* yang besar pada baseline adalah sumber *overfitting*. YOLOv8n-cls menghasilkan rerata terbaik pada seluruh metrik, yaitu akurasi 65,99%, F1-score macro 61,80%, dan ROC-AUC 0,891, dengan variasi antar fold yang paling kecil dan recall yang lebih baik pada kelas Healthy, Measles, dan Chickenpox. Akan tetapi, selisihnya terhadap ModifiedCNN tidak konsisten di semua fold dan lebih kecil daripada variasi antar fold ModifiedCNN, serta kondisi pelatihannya tidak sepenuhnya setara, sehingga keunggulan YOLO sebaiknya dipandang sebagai kecenderungan, bukan kepastian. Kelas Chickenpox, Cowpox, dan Measles masih sulit dikenali pada semua model, terutama karena sering tertukar dengan Monkeypox. Pengembangan berikutnya dapat berfokus pada penanganan ketidakseimbangan kelas, *ablation* arsitektur, dan penyamaan kondisi pelatihan antar model.
 
 ## REFERENSI
 
@@ -293,7 +300,7 @@ TODO: satu atau dua paragraf (tanpa poin). Isi: (1) ModifiedCNN memperbaiki Simp
 │   ├── ModifiedCNN.py      # ModifiedCNN
 │   └── YOLO.py             # pembungkus YOLOv8-cls (siapkan data, train, prediksi)
 ├── Utils/
-│   ├── getData.py          # penemuan fold, pre-processing, Dataset (getImageLabel)
+│   ├── getData.py          # penemuan fold, pre-processing, Dataset
 │   └── evaluate.py         # metrik, confusion matrix, ROC, plot training
 ├── train.py                # training 5-fold SimpleCNN/ModifiedCNN -> Checkpoints/ (tidak di-commit)
 ├── test.py                 # testing 5-fold SimpleCNN/ModifiedCNN -> Results/
@@ -312,7 +319,7 @@ TODO: satu atau dua paragraf (tanpa poin). Isi: (1) ModifiedCNN memperbaiki Simp
 1. Buat notebook baru. *Add Input* → dataset MSLD v2.0. *Settings* → Accelerator **GPU**, Internet **On**.
 2. `git clone` repo ini, lalu `pip install -r requirements.txt`.
 3. Jalankan perintah di bawah sesuai model yang diinginkan.
-4. Unduh folder `Results/<model>/` dari tab *Output* (atau lewat Git), lalu commit ke repo. Folder checkpoint tidak di-commit.
+4. Unduh folder `Results/<model>/` dari tab *Output*, lalu commit ke repo. Folder checkpoint tidak di-commit.
 
 **SimpleCNN**
 
@@ -347,4 +354,5 @@ python test_yolo.py  --data_root /kaggle/input
 
 **Uji cepat:** tambahkan `--folds 1 --epochs 2` pada perintah training dan `--folds 1` pada perintah testing.
 
+**Kepatuhan aturan tugas:** model hasil training (`*.pt`, `*.pth`, `*.h5`, dll.) dan dataset tidak diunggah (diblokir `.gitignore`); Valid/Test tidak dipakai untuk training; tidak ada dataset atau bobot pretrained dari luar.# Klasifikasi Citra Lesi Kulit Mpox: Perbandingan SimpleCNN, ModifiedCNN, dan YOLOv8-cls dengan 5-Fold Cross Validation
 **Kepatuhan aturan tugas:** model hasil training (`*.pt`, `*.pth`, `*.h5`, dll.) dan dataset tidak diunggah (diblokir `.gitignore`); Valid/Test tidak dipakai untuk training; tidak ada dataset atau bobot pretrained dari luar.
